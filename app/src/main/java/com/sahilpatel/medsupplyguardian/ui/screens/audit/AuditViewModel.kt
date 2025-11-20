@@ -234,4 +234,14 @@ class AuditViewModel(application: Application) : AndroidViewModel(application) {
         }
         loadSupplyItems()
     }
+
+    fun goToNextStep() {
+        val nextStep = (_uiState.value.currentStep + 1).coerceAtMost(5)
+        _uiState.update { it.copy(currentStep = nextStep) }
+    }
+
+    fun goToPreviousStep() {
+        val prevStep = (_uiState.value.currentStep - 1).coerceAtLeast(1)
+        _uiState.update { it.copy(currentStep = prevStep) }
+    }
 }
