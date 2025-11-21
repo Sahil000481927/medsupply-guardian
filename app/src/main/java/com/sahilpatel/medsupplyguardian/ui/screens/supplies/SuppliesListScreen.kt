@@ -6,7 +6,7 @@
  * visual indicators for risk levels and stock status.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.2
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.supplies
@@ -18,11 +18,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilpatel.medsupplyguardian.data.database.entities.SupplyItem
 import com.sahilpatel.medsupplyguardian.data.preferences.UserPreferencesManager
+import com.sahilpatel.medsupplyguardian.ui.components.FilterChipGroup
+import com.sahilpatel.medsupplyguardian.ui.components.SupplyItemCard
 
 /**
  * Supplies list screen composable with search and filter functionality.
@@ -34,17 +37,26 @@ import com.sahilpatel.medsupplyguardian.data.preferences.UserPreferencesManager
  * @param onNavigateToDetails Callback to navigate to supply details screen
  * @param onNavigateBack Callback to navigate back to previous screen
  * @param viewModel ViewModel for supplies list state management
+ * @param filterType Type of filter to apply (e.g., "risk", "expiring")
+ * @param filterValue Value of the filter to apply
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SuppliesListScreen(
     onNavigateToDetails: (Int) -> Unit,
     onNavigateBack: () -> Unit,
-    viewModel: SuppliesViewModel = viewModel()
+    viewModel: SuppliesViewModel = viewModel(),
+    filterType: String?,
+    filterValue: String?
 ) {
     val uiState by viewModel.listUiState.collectAsState()
-    var showFilterMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(filterType, filterValue) {
+        if (filterType != null && filterValue != null) {
+            viewModel.applyInitialFilter(filterType, filterValue)
+        }
+    }
     
     val sortingOptions = listOf(
         UserPreferencesManager.Companion.SortingModes.NAME_ASC,
@@ -68,98 +80,10 @@ fun SuppliesListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showFilterMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter"
-                        )
-                    }
                     IconButton(onClick = { showSortMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.Sort,
                             contentDescription = "Sort"
-                        )
-                    }
-                    
-                    DropdownMenu(
-                        expanded = showFilterMenu,
-                        onDismissRequest = { showFilterMenu = false }
-                    ) {
-                        Text(
-                            text = "Filter by Category",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                        DropdownMenuItem(
-                            text = { Text("All Categories") },
-                            onClick = {
-                                viewModel.updateCategoryFilter(null)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.Categories.PPE) },
-                            onClick = {
-                                viewModel.updateCategoryFilter(SupplyItem.Companion.Categories.PPE)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.Categories.MEDICATION) },
-                            onClick = {
-                                viewModel.updateCategoryFilter(SupplyItem.Companion.Categories.MEDICATION)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.Categories.SURGICAL_KIT) },
-                            onClick = {
-                                viewModel.updateCategoryFilter(SupplyItem.Companion.Categories.SURGICAL_KIT)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.Categories.DEVICE) },
-                            onClick = {
-                                viewModel.updateCategoryFilter(SupplyItem.Companion.Categories.DEVICE)
-                                showFilterMenu = false
-                            }
-                        )
-                        
-                        Divider()
-                        
-                        Text(
-                            text = "Filter by Risk",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                        DropdownMenuItem(
-                            text = { Text("All Risk Levels") },
-                            onClick = {
-                                viewModel.updateRiskFilter(null)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.RiskLevels.CRITICAL) },
-                            onClick = {
-                                viewModel.updateRiskFilter(SupplyItem.Companion.RiskLevels.CRITICAL)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.RiskLevels.ELEVATED) },
-                            onClick = {
-                                viewModel.updateRiskFilter(SupplyItem.Companion.RiskLevels.ELEVATED)
-                                showFilterMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(SupplyItem.Companion.RiskLevels.NORMAL) },
-                            onClick = {
-                                viewModel.updateRiskFilter(SupplyItem.Companion.RiskLevels.NORMAL)
-                                showFilterMenu = false
-                            }
                         )
                     }
                     
@@ -185,7 +109,9 @@ fun SuppliesListScreen(
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
-            Text(text = "Loading supplies...")
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
             Column(
                 modifier = Modifier
@@ -218,71 +144,71 @@ fun SuppliesListScreen(
                     singleLine = true
                 )
                 
-                if (uiState.selectedCategory != null || uiState.selectedRiskLevel != null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        uiState.selectedCategory?.let { category ->
-                            FilterChip(
-                                selected = true,
-                                onClick = { viewModel.updateCategoryFilter(null) },
-                                label = { Text(category) },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Remove filter",
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            )
-                        }
-                        uiState.selectedRiskLevel?.let { risk ->
-                            FilterChip(
-                                selected = true,
-                                onClick = { viewModel.updateRiskFilter(null) },
-                                label = { Text(risk) },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Remove filter",
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                FilterChipGroup(
+                    items = listOf(SupplyItem.Companion.Categories.PPE, SupplyItem.Companion.Categories.MEDICATION, SupplyItem.Companion.Categories.SURGICAL_KIT, SupplyItem.Companion.Categories.DEVICE),
+                    selectedItem = uiState.selectedCategory,
+                    onItemSelected = { viewModel.updateCategoryFilter(it) }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                FilterChipGroup(
+                    items = listOf(SupplyItem.Companion.RiskLevels.CRITICAL, SupplyItem.Companion.RiskLevels.ELEVATED, SupplyItem.Companion.RiskLevels.NORMAL),
+                    selectedItem = uiState.selectedRiskLevel,
+                    onItemSelected = { viewModel.updateRiskFilter(it) }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 if (uiState.supplyItems.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = androidx.compose.ui.Alignment.Center
-                    ) {
-                        Text(
-                            text = "No supplies found",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    EmptyState()
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(
                             items = uiState.supplyItems,
                             key = { it.itemId }
                         ) { item ->
-                            Text(text = "SupplyItemCard")
+                            SupplyItemCard(
+                                item = item,
+                                onClick = { onNavigateToDetails(item.itemId) }
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyState() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.Inventory2,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "No supplies found",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Try adjusting your search or filters.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

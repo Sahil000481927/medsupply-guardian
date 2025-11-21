@@ -6,7 +6,7 @@
  * parameters for consistent behavior across all modules.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.1
  */
 
 package com.sahilpatel.medsupplyguardian.utils
@@ -21,15 +21,20 @@ object Constants {
      */
     object Routes {
         const val HOME = "home"
-        const val SUPPLIES = "supplies"
+        const val SUPPLIES = "supplies?filterType={filterType}&filterValue={filterValue}"
         const val SUPPLY_DETAILS = "supply/{itemId}"
         const val AUDIT_START = "audit/start"
-        const val AUDIT_STEP = "audit/step/{stepNumber}"
-        const val AUDIT_SUMMARY = "audit/summary"
+        const val AUDIT = "audit"
         const val SETTINGS = "settings"
         
         fun supplyDetails(itemId: Int) = "supply/$itemId"
-        fun auditStep(stepNumber: Int) = "audit/step/$stepNumber"
+        fun supplies(filterType: String? = null, filterValue: String? = null): String {
+            return if (filterType != null && filterValue != null) {
+                "supplies?filterType=$filterType&filterValue=$filterValue"
+            } else {
+                "supplies?filterType=none&filterValue=none"
+            }
+        }
     }
     
     /**

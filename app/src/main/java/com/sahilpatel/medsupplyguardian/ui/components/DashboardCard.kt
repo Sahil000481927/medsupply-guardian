@@ -5,7 +5,7 @@
  * and alerts on the home dashboard including critical stock and expiring items.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.1
  */
 
 package com.sahilpatel.medsupplyguardian.ui.components
@@ -133,7 +133,7 @@ fun CriticalAlertCard(
 @Composable
 fun ExpiringItemsCard(
     count: Int,
-    daysThreshold: Int = 30,
+    daysThreshold: Int,
     onClick: (() -> Unit)? = null
 ) {
     DashboardCard(

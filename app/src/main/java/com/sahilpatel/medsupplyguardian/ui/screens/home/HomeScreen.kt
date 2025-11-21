@@ -6,7 +6,7 @@
  * inventory status and compliance monitoring overview.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.2
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.home
@@ -20,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sahilpatel.medsupplyguardian.data.database.entities.SupplyItem
+import com.sahilpatel.medsupplyguardian.ui.components.CriticalAlertCard
+import com.sahilpatel.medsupplyguardian.ui.components.ExpiringItemsCard
 
 /**
  * Home screen composable displaying the main dashboard.
@@ -35,7 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSupplies: () -> Unit,
+    onNavigateToSupplies: (String?, String?) -> Unit,
     onNavigateToAudit: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = viewModel()
@@ -44,29 +47,9 @@ fun HomeScreen(
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "MedSupply Guardian",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            text = "Welcome, ${uiState.technicianName}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
+            CenterAlignedTopAppBar(
+                title = { Text("MedSupply Guardian") },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -74,93 +57,57 @@ fun HomeScreen(
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
-            Text(text = "Loading dashboard...")
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(16.dp),
             ) {
                 Text(
-                    text = "Dashboard Overview",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onBackground
+                    text = "Welcome, ${uiState.technicianName}",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
-                Text(text = "CriticalAlertCard")
-                
-                Text(text = "ExpiringItemsCard")
+                CriticalAlertCard(
+                    count = uiState.criticalStockCount,
+                    onClick = { onNavigateToSupplies("risk", SupplyItem.Companion.RiskLevels.CRITICAL) }
+                )
                 
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Quick Actions",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onBackground
+
+                ExpiringItemsCard(
+                    count = uiState.expiringSoonCount,
+                    daysThreshold = uiState.alertThreshold,
+                    onClick = { onNavigateToSupplies("expiring", uiState.alertThreshold.toString()) }
                 )
                 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ElevatedCard(
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToSupplies
+                Spacer(modifier = Modifier.weight(1f))
+                
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onNavigateToSupplies(null, null) },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Inventory,
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "View Supplies",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Text("View Supplies")
                     }
-                    
-                    ElevatedCard(
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToAudit
+                    FilledTonalButton(
+                        onClick = onNavigateToAudit,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Assessment,
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                            Text(
-                                text = "Start Audit",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Text("Start Audit")
+                    }
+                    OutlinedButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Settings")
                     }
                 }
-                
-                Text(text = "DashboardCard")
             }
         }
     }

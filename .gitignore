@@ -56,6 +56,8 @@ google-services.json
 .DS_Store
 Thumbs.db
 
+.kotlin
+
 /local.properties
 /.idea/caches
 /.idea/libraries

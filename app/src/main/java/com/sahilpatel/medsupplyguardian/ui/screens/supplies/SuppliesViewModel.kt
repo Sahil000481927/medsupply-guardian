@@ -6,7 +6,7 @@
  * and quantity updates with proper state management.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.3
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.supplies
@@ -21,6 +21,11 @@ import com.sahilpatel.medsupplyguardian.data.repository.SupplyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -96,55 +101,42 @@ class SuppliesViewModel(application: Application) : AndroidViewModel(application
         val database = AppDatabase.getDatabase(application)
         repository = SupplyRepository(database.supplyItemDao())
         preferencesManager = UserPreferencesManager(application)
-        
-        loadSupplyItems()
-    }
-    
-    /**
-     * Loads supply items based on current filters and search query.
-     * 
-     * Applies category filter, risk level filter, and search query,
-     * then sorts the results according to user preferences.
-     */
-    private fun loadSupplyItems() {
-        viewModelScope.launch {
-            val sortingMode = preferencesManager.getSortingMode()
-            _listUiState.update { it.copy(sortingMode = sortingMode) }
-            
-            val currentState = _listUiState.value
-            val flow = when {
-                currentState.searchQuery.isNotEmpty() -> {
-                    repository.searchItems(currentState.searchQuery)
-                }
-                currentState.selectedCategory != null -> {
-                    repository.filterByCategory(currentState.selectedCategory)
-                }
-                currentState.selectedRiskLevel != null -> {
-                    repository.filterByRisk(currentState.selectedRiskLevel)
-                }
-                else -> {
-                    repository.getAllItems()
+
+        val itemsFlow = _listUiState
+            .debounce(300)
+            .flatMapLatest { state ->
+                when {
+                    state.searchQuery.isNotEmpty() -> repository.searchItems(state.searchQuery)
+                    state.selectedCategory != null -> repository.filterByCategory(state.selectedCategory)
+                    state.selectedRiskLevel != null -> repository.filterByRisk(state.selectedRiskLevel)
+                    else -> repository.getAllItems()
                 }
             }
-            
-            flow.collect { items ->
-                val sortedItems = sortItems(items, sortingMode)
-                _listUiState.update { it.copy(
-                    supplyItems = sortedItems,
-                    isLoading = false
-                )}
+
+        combine(itemsFlow, preferencesManager.sortingMode) { items, sortMode ->
+            sortItems(items, sortMode)
+        }.onEach { sortedItems ->
+            _listUiState.update { it.copy(supplyItems = sortedItems, isLoading = false) }
+        }.launchIn(viewModelScope)
+    }
+
+    fun applyInitialFilter(filterType: String, filterValue: String) {
+        when (filterType) {
+            "risk" -> updateRiskFilter(filterValue)
+            "expiring" -> {
+                // This is a bit of a hack, as we don't have a direct way to filter by expiry in the UI
+                // We'll just load all items and let the user see the expiring ones highlighted.
             }
         }
     }
     
     /**
-     * Updates the search query and reloads items.
-     * 
+     * Updates the search query.
+     *
      * @param query Search keyword to filter by item name
      */
     fun updateSearchQuery(query: String) {
-        _listUiState.update { it.copy(searchQuery = query, isLoading = true) }
-        loadSupplyItems()
+        _listUiState.update { it.copy(searchQuery = query, selectedCategory = null, selectedRiskLevel = null) }
     }
     
     /**
@@ -156,9 +148,9 @@ class SuppliesViewModel(application: Application) : AndroidViewModel(application
         _listUiState.update { it.copy(
             selectedCategory = category,
             searchQuery = "",
-            isLoading = true
+            isLoading = true,
+            selectedRiskLevel = null
         )}
-        loadSupplyItems()
     }
     
     /**
@@ -170,9 +162,9 @@ class SuppliesViewModel(application: Application) : AndroidViewModel(application
         _listUiState.update { it.copy(
             selectedRiskLevel = riskLevel,
             searchQuery = "",
-            isLoading = true
+            isLoading = true,
+            selectedCategory = null
         )}
-        loadSupplyItems()
     }
     
     /**
@@ -181,9 +173,9 @@ class SuppliesViewModel(application: Application) : AndroidViewModel(application
      * @param sortingMode New sorting mode to apply
      */
     fun updateSortingMode(sortingMode: String) {
-        preferencesManager.setSortingMode(sortingMode)
-        _listUiState.update { it.copy(sortingMode = sortingMode) }
-        loadSupplyItems()
+        viewModelScope.launch {
+            preferencesManager.setSortingMode(sortingMode)
+        }
     }
     
     /**
@@ -196,7 +188,6 @@ class SuppliesViewModel(application: Application) : AndroidViewModel(application
             selectedRiskLevel = null,
             isLoading = true
         )}
-        loadSupplyItems()
     }
     
     /**

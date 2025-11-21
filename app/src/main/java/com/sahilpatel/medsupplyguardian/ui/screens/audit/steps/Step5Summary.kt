@@ -5,13 +5,14 @@
  * review all collected data and submit the complete audit report.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.1
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.audit.steps
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,7 +58,7 @@ fun Step5Summary(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
@@ -148,7 +149,7 @@ fun Step5Summary(
                     
                     SummaryCard(
                         title = "Expiry Dates Checked",
-                        value = uiState.expiryChecked.size.toString(),
+                        value = uiState.expiryCheckedItems.size.toString(),
                         icon = Icons.Default.CalendarToday,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -235,7 +236,7 @@ fun Step5Summary(
             }
             
             UploadProgressOverlay(
-                isVisible = uiState.isUploading,
+                isVisible = uiState.isSubmitting,
                 message = "Uploading audit report..."
             )
         }

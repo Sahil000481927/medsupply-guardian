@@ -5,7 +5,7 @@
  * review and validate expiration dates for all supply items.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.1
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.audit.steps
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -53,7 +54,7 @@ fun Step2CheckExpiry(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
@@ -89,7 +90,7 @@ fun Step2CheckExpiry(
                     items = uiState.supplyItems,
                     key = { it.itemId }
                 ) { item ->
-                    val isChecked = uiState.expiryChecked.contains(item.itemId)
+                    val isChecked = uiState.expiryCheckedItems.contains(item.itemId)
                     val daysUntilExpiry = item.daysUntilExpiry()
                     
                     ElevatedCard(

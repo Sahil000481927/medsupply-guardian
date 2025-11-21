@@ -6,7 +6,7 @@
  * summary metrics for quick decision-making.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.1
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.home
@@ -15,12 +15,13 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sahilpatel.medsupplyguardian.data.database.AppDatabase
-import com.sahilpatel.medsupplyguardian.data.database.entities.SupplyItem
 import com.sahilpatel.medsupplyguardian.data.preferences.UserPreferencesManager
 import com.sahilpatel.medsupplyguardian.data.repository.SupplyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -32,15 +33,15 @@ import kotlinx.coroutines.launch
  * 
  * @property isLoading Whether data is currently being loaded from the database
  * @property technicianName Name of the current user from SharedPreferences
- * @property criticalItemsCount Number of items below minimum required quantity
- * @property expiringItemsCount Number of items expiring within threshold
+ * @property criticalStockCount Number of items below minimum required quantity
+ * @property expiringSoonCount Number of items expiring within threshold
  * @property alertThreshold Number of days threshold for expiration warnings
  */
 data class HomeUiState(
     val isLoading: Boolean = true,
     val technicianName: String = "Technician",
-    val criticalItemsCount: Int = 0,
-    val expiringItemsCount: Int = 0,
+    val criticalStockCount: Int = 0,
+    val expiringSoonCount: Int = 0,
     val alertThreshold: Int = 30
 )
 
@@ -70,52 +71,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         repository = SupplyRepository(database.supplyItemDao())
         preferencesManager = UserPreferencesManager(application)
         
-        loadDashboardData()
-    }
-    
-    /**
-     * Loads dashboard data from repository and preferences.
-     * 
-     * Observes critical items and expiring items from the database,
-     * retrieves technician name from SharedPreferences, and updates
-     * the UI state accordingly.
-     */
-    private fun loadDashboardData() {
         viewModelScope.launch {
-            val techName = preferencesManager.getStaffName()
-            val threshold = preferencesManager.getAlertThreshold()
-            
-            _uiState.update { it.copy(
-                technicianName = techName,
-                alertThreshold = threshold
-            )}
-            
-            repository.getCriticalItems().collect { criticalItems ->
-                _uiState.update { it.copy(
-                    criticalItemsCount = criticalItems.size
-                )}
-            }
+            combine(
+                preferencesManager.staffName,
+                repository.getCriticalItems(),
+                preferencesManager.alertThreshold.flatMapLatest { threshold ->
+                    repository.getExpiringItems(threshold)
+                }
+            ) { staffName, criticalItems, expiringItems ->
+                _uiState.update {
+                    it.copy(
+                        technicianName = staffName,
+                        criticalStockCount = criticalItems.size,
+                        expiringSoonCount = expiringItems.size,
+                        alertThreshold = expiringItems.firstOrNull()?.daysUntilExpiry()?.toInt() ?: 30,
+                        isLoading = false
+                    )
+                }
+            }.collect {}
         }
-        
-        viewModelScope.launch {
-            val threshold = preferencesManager.getAlertThreshold()
-            repository.getExpiringItems(threshold).collect { expiringItems ->
-                _uiState.update { it.copy(
-                    expiringItemsCount = expiringItems.size,
-                    isLoading = false
-                )}
-            }
-        }
-    }
-    
-    /**
-     * Refreshes dashboard data manually.
-     * 
-     * Can be called when returning from other screens to ensure
-     * metrics are up-to-date.
-     */
-    fun refreshDashboard() {
-        _uiState.update { it.copy(isLoading = true) }
-        loadDashboardData()
     }
 }

@@ -6,7 +6,7 @@
  * and expiration status.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.1
  */
 
 package com.sahilpatel.medsupplyguardian.ui.components
@@ -76,7 +76,7 @@ fun SupplyItemCard(
                 RiskChip(riskLevel = item.riskLevel)
             }
             
-            Divider(
+            HorizontalDivider(
                 modifier = Modifier.padding(vertical = 4.dp),
                 color = MaterialTheme.colorScheme.outlineVariant
             )

@@ -5,7 +5,7 @@
  * personal information, app behavior, and notification preferences.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.3
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.settings
@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * Settings screen composable for user preferences.
  * 
  * Provides UI for updating staff information, sorting preferences,
- * theme, and alert settings. Includes feedback on save success.
+ * theme, and alert settings. Changes are saved when the user presses the save button.
  * 
  * @param onNavigateBack Callback to navigate back to the previous screen
  * @param viewModel ViewModel for settings state management
@@ -38,14 +38,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    
-    LaunchedEffect(uiState.saveSuccess) {
-        if (uiState.saveSuccess) {
-            snackbarHostState.showSnackbar("Settings saved successfully!")
-            viewModel.clearSaveSuccess()
-        }
-    }
     
     Scaffold(
         topBar = {
@@ -53,7 +45,7 @@ fun SettingsScreen(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -61,7 +53,20 @@ fun SettingsScreen(
                 )
             )
         },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        bottomBar = {
+            // Add a Save button at the bottom
+            FilledTonalButton(
+                onClick = { 
+                    viewModel.saveSettings()
+                    onNavigateBack()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text("Save Settings")
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -91,7 +96,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             
             Text(
                 text = "App Preferences",
@@ -113,7 +118,7 @@ fun SettingsScreen(
                 )
             }
             
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             
             Text(
                 text = "Notifications & Alerts",
@@ -124,15 +129,6 @@ fun SettingsScreen(
             AlertThresholdPreference(viewModel = viewModel)
             
             AuditReminderPreference(viewModel = viewModel)
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            Button(
-                onClick = { viewModel.saveSettings() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Settings")
-            }
         }
     }
 }

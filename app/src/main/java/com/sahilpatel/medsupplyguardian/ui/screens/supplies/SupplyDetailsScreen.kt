@@ -12,6 +12,8 @@
 package com.sahilpatel.medsupplyguardian.ui.screens.supplies
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -20,10 +22,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sahilpatel.medsupplyguardian.ui.components.QuantityUpdateDialog
-import com.sahilpatel.medsupplyguardian.ui.components.SupplyDetailItem
+import java.text.SimpleDateFormat
+import java.util.Date
 
 /**
  * Supply details screen composable.
@@ -69,9 +74,11 @@ fun SupplyDetailsScreen(
         }
     ) { paddingValues ->
         if (uiState.isLoading) {
-            Text(text = "Loading item details...")
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         } else if (uiState.supplyItem == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Item not found.")
             }
         } else {
@@ -81,14 +88,49 @@ fun SupplyDetailsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
             ) {
-                SupplyDetailItem(label = "Item Name", value = item.name)
-                SupplyDetailItem(label = "Category", value = item.category)
-                SupplyDetailItem(label = "Location", value = item.location)
-                SupplyDetailItem(label = "Risk Level", value = item.riskLevel)
-                SupplyDetailItem(label = "Current Quantity", value = item.currentQuantity.toString())
-                SupplyDetailItem(label = "Minimum Required", value = item.minimumRequired.toString())
-                SupplyDetailItem(label = "Expires On", value = java.text.SimpleDateFormat("MM/dd/yyyy").format(java.util.Date(item.expiryDate)))
+                // General Information Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "General Information", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+                        DetailRow(label = "Item Name", value = item.name)
+                        DetailRow(label = "Category", value = item.category)
+                        DetailRow(label = "Location", value = item.location)
+                        DetailRow(label = "Risk Level", value = item.riskLevel)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Stock Information Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Stock Information", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+                        DetailRow(label = "Current Quantity", value = item.currentQuantity.toString())
+                        DetailRow(label = "Minimum Required", value = item.minimumRequired.toString())
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Expiration Information Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "Expiration Information", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+                        DetailRow(label = "Expires On", value = SimpleDateFormat("MM/dd/yyyy").format(Date(item.expiryDate)))
+                    }
+                }
             }
             
             if (uiState.showUpdateDialog) {
@@ -102,5 +144,18 @@ fun SupplyDetailsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }

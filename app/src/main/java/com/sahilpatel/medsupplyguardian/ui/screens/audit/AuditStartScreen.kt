@@ -6,13 +6,17 @@
  * audit workflow.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.2
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.audit
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,7 +51,7 @@ fun AuditStartScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }
@@ -63,6 +67,7 @@ fun AuditStartScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -80,7 +85,7 @@ fun AuditStartScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Assignment,
+                        imageVector = Icons.AutoMirrored.Filled.Assignment,
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -97,6 +102,27 @@ fun AuditStartScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
+            }
+
+            Button(
+                onClick = {
+                    viewModel.resetAudit()
+                    onNavigateToStep(Constants.Audit.STEP_VERIFY_QUANTITY)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Start Audit",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
             
             Text(
@@ -140,29 +166,6 @@ fun AuditStartScreen(
                 description = "Review findings and upload audit report",
                 icon = Icons.Default.CloudUpload
             )
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            Button(
-                onClick = {
-                    viewModel.resetAudit()
-                    onNavigateToStep(Constants.Audit.STEP_VERIFY_QUANTITY)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Start Audit",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
         }
     }
 }

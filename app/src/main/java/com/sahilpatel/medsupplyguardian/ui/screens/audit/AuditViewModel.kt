@@ -5,7 +5,7 @@
  * data collection across all steps, validation, and final audit record creation.
  * 
  * @author Sahil Patel
- * @version 1.0
+ * @version 1.3
  */
 
 package com.sahilpatel.medsupplyguardian.ui.screens.audit
@@ -22,6 +22,7 @@ import com.sahilpatel.medsupplyguardian.data.repository.SupplyRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,29 +31,27 @@ import kotlinx.coroutines.launch
  * 
  * Maintains all data collected during the 5-step audit process.
  * 
- * @property currentStep Current step number (1-5)
  * @property isLoading Whether data is being loaded
  * @property supplyItems List of supply items for audit
  * @property verifiedQuantities Map of item IDs to verified quantities (Step 1)
- * @property expiryChecked Set of item IDs confirmed for expiry (Step 2)
+ * @property expiryCheckedItems Set of item IDs confirmed for expiry (Step 2)
  * @property storageConditionsPassed Whether storage validation passed (Step 3)
  * @property missingItems Set of item IDs marked as missing (Step 4)
  * @property damagedItems Set of item IDs marked as damaged (Step 4)
  * @property auditNotes Additional notes from technician (Step 4)
- * @property isUploading Whether audit is being uploaded
+ * @property isSubmitting Whether audit is being uploaded
  * @property uploadComplete Whether upload has finished
  */
 data class AuditUiState(
-    val currentStep: Int = 1,
     val isLoading: Boolean = true,
     val supplyItems: List<SupplyItem> = emptyList(),
     val verifiedQuantities: Map<Int, Int> = emptyMap(),
-    val expiryChecked: Set<Int> = emptySet(),
+    val expiryCheckedItems: Set<Int> = emptySet(),
     val storageConditionsPassed: Boolean = false,
     val missingItems: Set<Int> = emptySet(),
     val damagedItems: Set<Int> = emptySet(),
     val auditNotes: String = "",
-    val isUploading: Boolean = false,
+    val isSubmitting: Boolean = false,
     val uploadComplete: Boolean = false
 )
 
@@ -99,6 +98,14 @@ class AuditViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    /**
+     * Resets the audit workflow to initial state.
+     */
+    fun resetAudit() {
+        _uiState.value = AuditUiState(isLoading = true)
+        loadSupplyItems()
+    }
     
     /**
      * Updates verified quantity for a specific item (Step 1).
@@ -121,13 +128,13 @@ class AuditViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun toggleExpiryChecked(itemId: Int) {
         _uiState.update {
-            val updated = it.expiryChecked.toMutableSet()
+            val updated = it.expiryCheckedItems.toMutableSet()
             if (updated.contains(itemId)) {
                 updated.remove(itemId)
             } else {
                 updated.add(itemId)
             }
-            it.copy(expiryChecked = updated)
+            it.copy(expiryCheckedItems = updated)
         }
     }
     
@@ -191,7 +198,7 @@ class AuditViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun submitAudit() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isUploading = true) }
+            _uiState.update { it.copy(isSubmitting = true) }
             
             val currentState = _uiState.value
             val totalItems = currentState.supplyItems.size
@@ -199,8 +206,8 @@ class AuditViewModel(application: Application) : AndroidViewModel(application) {
             val itemsExpiringSoon = currentState.supplyItems.count { it.isExpiringWithin(30) }
             
             val auditRecord = AuditRecord(
-                technicianName = preferencesManager.getStaffName(),
-                technicianId = preferencesManager.getStaffId(),
+                technicianName = preferencesManager.staffName.first(),
+                technicianId = preferencesManager.staffId.first(),
                 auditDate = System.currentTimeMillis(),
                 totalItemsReviewed = totalItems,
                 itemsFailing = itemsFailing,
@@ -217,31 +224,9 @@ class AuditViewModel(application: Application) : AndroidViewModel(application) {
             kotlinx.coroutines.delay(2500L)
             
             _uiState.update { it.copy(
-                isUploading = false,
+                isSubmitting = false,
                 uploadComplete = true
             )}
         }
-    }
-    
-    /**
-     * Resets the audit workflow to initial state.
-     * 
-     * Called when starting a new audit.
-     */
-    fun resetAudit() {
-        _uiState.update {
-            AuditUiState(isLoading = true)
-        }
-        loadSupplyItems()
-    }
-
-    fun goToNextStep() {
-        val nextStep = (_uiState.value.currentStep + 1).coerceAtMost(5)
-        _uiState.update { it.copy(currentStep = nextStep) }
-    }
-
-    fun goToPreviousStep() {
-        val prevStep = (_uiState.value.currentStep - 1).coerceAtLeast(1)
-        _uiState.update { it.copy(currentStep = prevStep) }
     }
 }
